@@ -1,0 +1,15 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class LogAktivitas extends Model
+{
+    protected $table = 'log_aktivitas';
+    protected $guarded = [];
+    const UPDATED_AT = 'null';
+    public function user() {
+        return $this->belongsTo(User::class);
+    }
+}
