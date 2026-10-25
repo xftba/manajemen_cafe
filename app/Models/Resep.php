@@ -6,21 +6,16 @@ use Illuminate\Database\Eloquent\Model;
 
 class Resep extends Model
 {
-    protected $table = 'transaksi';
+    protected $table = 'resep';
     protected $guarded = [];
-    protected $casts = [
-        'tanggal_transaksi' => 'datetime'
-    ];
-    public function user() {
-        return $this->belongsTo(User::class);
+
+    public function menu()
+    {
+        return $this->belongsTo(Menu::class);
     }
-    public function detail() {
-        return $this->hasMany(DetailTransaksi::class);
-    }
-    public function pembayaran() {
-        return $this->hasOne(Pembayaran::class);
-    }
-    public function pergerakanStok() {
-        return $this->hasMany(PergerakanStok::class);
+
+    public function bahanBaku()
+    {
+        return $this->belongsTo(BahanBaku::class);
     }
 }

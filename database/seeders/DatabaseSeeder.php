@@ -2,24 +2,39 @@
 
 namespace Database\Seeders;
 
+use App\Models\PengaturanCafe;
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // User::factory(10)->create();
+        User::create([
+            'nama' => 'Admin Cafe',
+            'email' => 'admin@cafe.test',
+            'password' => 'password',
+            'role' => 'admin',
+        ]);
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        User::create([
+            'nama' => 'Kasir Satu',
+            'email' => 'kasir@cafe.test',
+            'password' => 'password',
+            'role' => 'kasir',
+        ]);
+
+        User::create([
+            'nama' => 'Staff Gudang',
+            'email' => 'gudang@cafe.test',
+            'password' => 'password',
+            'role' => 'staff_gudang',
+        ]);
+
+        PengaturanCafe::create([
+            'nama_cafe' => 'Manajemen Cafe',
+            'alamat' => 'Jakarta',
+            'telepon' => '081234567890',
         ]);
     }
 }
