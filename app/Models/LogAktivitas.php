@@ -6,10 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class LogAktivitas extends Model
 {
+    const UPDATED_AT = null;
+
     protected $table = 'log_aktivitas';
     protected $guarded = [];
-    const UPDATED_AT = 'null';
-    public function user() {
+
+    public function user()
+    {
         return $this->belongsTo(User::class);
     }
 }

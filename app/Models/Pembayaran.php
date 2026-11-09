@@ -8,7 +8,9 @@ class Pembayaran extends Model
 {
     protected $table = 'pembayaran';
     protected $guarded = [];
-    public function transaksi() {
+
+    public function transaksi()
+    {
         return $this->belongsTo(Transaksi::class);
     }
 }

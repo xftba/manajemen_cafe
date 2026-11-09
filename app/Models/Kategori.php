@@ -8,7 +8,9 @@ class Kategori extends Model
 {
     protected $table = 'kategori';
     protected $guarded = [];
-    public function menu() {
+
+    public function menu()
+    {
         return $this->hasMany(Menu::class);
     }
 }

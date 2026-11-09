@@ -18,4 +18,6 @@ class Resep extends Model
     {
         return $this->belongsTo(BahanBaku::class);
     }
+    
 }
+

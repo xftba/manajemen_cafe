@@ -34,7 +34,7 @@ class DatabaseSeeder extends Seeder
         PengaturanCafe::create([
             'nama_cafe' => 'Manajemen Cafe',
             'alamat' => 'Jakarta',
-            'telepon' => '081234567890',
+            'telepon' => '085813382575',
         ]);
     }
 }
