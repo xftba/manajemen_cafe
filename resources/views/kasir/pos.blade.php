@@ -37,6 +37,18 @@
 
         {{-- Chip kategori --}}
         <div class="flex flex-wrap gap-2">
+            <button type="button" @click="pilihKategori(null)"
+                :class="(kategoriAktif === null && !cari) ? 'bg-accent text-white shadow-sm' : 'bg-neutral-200/80 text-neutral-400 hover:bg-neutral-300/70'"
+                class="flex h-7 items-center gap-1.5 rounded-full pl-[5px] pr-4 text-[11px] font-semibold transition">
+            <span class="flex h-[18px] w-[18px] items-center justify-center rounded-full"
+                :class="(kategoriAktif === null && !cari) ? 'bg-white text-accent' : 'bg-white/80 text-neutral-400'">
+                <svg class="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/>
+                    <rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/>
+                </svg>
+            </span>
+            Semua Menu
+        </button>
             <template x-for="k in kategori" :key="k.id">
                 <button type="button" @click="pilihKategori(k.id)"
                         :class="(kategoriAktif === k.id && !cari) ? 'bg-accent text-white shadow-sm' : 'bg-neutral-200/80 text-neutral-400 hover:bg-neutral-300/70'"
@@ -504,7 +516,7 @@ document.addEventListener('alpine:init', () => {
         konfig,
         opsi: konfig.opsi,
         stokAwal: Object.fromEntries(konfig.bahan.map(b => [b.id, b.stok])),
-        kategoriAktif: kategori.length ? kategori[0].id : null,
+        kategoriAktif: null,   // null = Semua Menu
         cari: '',
         tipe: 'takeaway',
         customer: '',
@@ -531,10 +543,11 @@ document.addEventListener('alpine:init', () => {
             const q = this.cari.trim().toLowerCase();
             return this.menu.filter(m => q
                 ? m.nama.toLowerCase().includes(q)
-                : m.kategori_id === this.kategoriAktif);
+                : (this.kategoriAktif === null || m.kategori_id === this.kategoriAktif));
         },
         get judulDaftar() {
             if (this.cari.trim()) return 'Hasil Pencarian';
+            if (this.kategoriAktif === null) return 'Semua Menu';
             const k = this.kategori.find(k => k.id === this.kategoriAktif);
             return k ? k.nama + ' Menu' : 'Menu';
         },
@@ -604,18 +617,18 @@ resepUntuk(m, ukuran, suhu = null, gula = 'normal') {
             for (const i of this.keranjang) {
                 if (i.key === kecualiKey) continue;
                 const m = this.menu.find(x => x.id === i.menu_id);
-                for (const r of this.resepUntuk(m, i.ukuran, i.temperatur)) {
+                for (const r of this.resepUntuk(m, i.ukuran, i.temperatur, i.gula || 'normal')) {
                     total[r.bahan_id] = (total[r.bahan_id] || 0) + i.jumlah * r.takaran;
                 }
             }
             return total;
         },
 
-        bisaTambahUkuran(m, ukuran, jumlah = 1, kecualiKey = null, suhu = null) {
-            const resep = this.resepUntuk(m, ukuran, suhu);
+        bisaTambahUkuran(m, ukuran, jumlah = 1, kecualiKey = null, suhu = null, gula = 'normal') {
+            const resep = this.resepUntuk(m, ukuran, suhu, gula);
             if (!resep.length) return false;
             const dipakai = this.pakai(kecualiKey);
-            return resep.every(r =>
+            return resep.every(r => r.takaran <= 0 ||
                 (this.stokAwal[r.bahan_id] || 0) - (dipakai[r.bahan_id] || 0) + 1e-6 >= jumlah * r.takaran);
         },
 
@@ -686,6 +699,14 @@ resepUntuk(m, ukuran, suhu = null, gula = 'normal') {
                 const u = this.daftarUkuran(this.menuPopup).find(x => this.ukuranBisa(x));
                 if (u) this.f.ukuran = u;
             }
+        },
+
+        // ----- kategori dan pencarian -----
+        pilihKategori(id) {
+            this.kategoriAktif = id;
+            this.cari = '';
+            const kolom = document.getElementById('cari-menu');
+            if (kolom) kolom.value = '';
         },
 
         buka(m) {
