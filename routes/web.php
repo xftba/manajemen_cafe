@@ -104,6 +104,8 @@ Route::middleware(['auth', 'aktif'])->group(function () {
         Route::get('pergerakan-stok', [PergerakanStokController::class, 'index'])->name('pergerakan-stok.index');
         Route::get('penyesuaian-stok', [PenyesuaianStokController::class, 'index'])->name('penyesuaian-stok.index');
         Route::get('notifikasi/restock', [\App\Http\Controllers\NotifikasiController::class, 'restock'])->name('notifikasi.restock');
+
+        Route::get('supplier/{supplier}', [SupplierController::class, 'show'])->name('supplier.show');
     });
 
     // ===== STAFF GUDANG =====

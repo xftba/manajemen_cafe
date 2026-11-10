@@ -9,4 +9,5 @@ return [
     'bahan_hanya_ice' => ['es batu'],
     'ukuran'     => ['small' => 'Small', 'medium' => 'Medium', 'large' => 'Large'],
     'gula'       => ['normal' => 'Normal Sugar', 'less' => 'Less Sugar', 'no' => 'No Sugar'],
+    'pengali_gula' => ['normal' => 1, 'less' => 0.5, 'no' => 0],
 ];

@@ -18,6 +18,7 @@
                     'bahan_baku_id' => (string) $r->bahan_baku_id,
                     'takaran'       => (float) $r->takaran,
                     'temperatur'    => $r->temperatur ?? '',
+                    'ikut_gula'     => (bool) $r->ikut_gula,
                 ])
                 ->values()->all();
         }
@@ -173,7 +174,9 @@
                 </div>
             @endif
 
-            <div class="mt-3">{{ $menu->withQueryString()->links('vendor.pagination.custom') }}</div>
+            <<div class="mt-4 border-t border-neutral-100 pt-4">
+                {{ $menu->withQueryString()->links('vendor.pagination.custom') }}
+            </div>
         </section>
 
         {{-- ================= KANAN: UBAH RESEP ================= --}}
@@ -319,6 +322,17 @@
                                                     x-text="opt[1]"></button>
                                         </template>
                                     </div>
+
+                                    {{-- Ikut level gula --}}
+                                    <div x-show="m.varian" class="mt-1.5 flex items-center gap-1.5">
+                                        <input type="hidden" :name="`resep[${u.kode}][${i}][ikut_gula]`" :value="row.ikut_gula ? 1 : 0">
+                                        <button type="button" @click="row.ikut_gula = !row.ikut_gula"
+                                                :class="row.ikut_gula ? 'bg-accent text-white shadow-sm' : 'bg-white text-neutral-500 hover:bg-neutral-100'"
+                                                class="h-6 rounded-full px-2.5 text-[10px] font-semibold transition">
+                                            Ikut level gula
+                                        </button>
+                                        <span class="text-[9px] text-neutral-400">Aktifkan untuk gula / sirup</span>
+                                    </div>
                                 </div>
                             </template>
 
@@ -375,7 +389,7 @@ document.addEventListener('alpine:init', () => {
                 (r.temperatur === '' || suhu === '' || r.temperatur === suhu));
         },
         jumlah(u) { return (this.data[u] || []).length; },
-
+        tambah(u) { this.data[u].push({ bahan_baku_id: '', takaran: '', temperatur: '', ikut_gula: false }); },
         buka(id) {
             const m = this.daftar.find(x => x.id === id);
             if (!m) return;
@@ -393,7 +407,7 @@ document.addEventListener('alpine:init', () => {
         },
         tutup() { this.id = null; this.dd = null; },
 
-        tambah(u) { this.data[u].push({ bahan_baku_id: '', takaran: '', temperatur: '' }); },
+        tambah(u) { this.data[u].push({ bahan_baku_id: '', takaran: '', temperatur: '' , ikut_gula: false}); },
         hapus(u, i) {
             this.dd = null;
             this.data[u].splice(i, 1);
@@ -410,6 +424,7 @@ document.addEventListener('alpine:init', () => {
                     bahan_baku_id: r.bahan_baku_id,
                     temperatur: r.temperatur || '',
                     takaran: Math.round((parseFloat(r.takaran) || 0) * f * 100) / 100,
+                    ikut_gula: !!r.ikut_gula,
                 }));
         },
         // Baris yang sama sekali kosong dibuang sebelum dikirim
@@ -434,6 +449,7 @@ document.addEventListener('alpine:init', () => {
                         bahan_baku_id: String(r.bahan_baku_id ?? ''),
                         takaran: r.takaran ?? '',
                         temperatur: r.temperatur ?? '',
+                        ikut_gula: !!r.ikut_gula,
                     }));
                 }
                 if (this.data.small.length === 0) this.tambah('small');

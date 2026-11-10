@@ -6,6 +6,7 @@
 @php
     $admin  = auth()->user()->role === 'admin';
     $editId = old('_edit_id');
+    $bulanIni = now()->format('Y-m');
 
     $daftarSupplier = $supplier->getCollection()->map(fn ($s) => [
         'id'        => $s->id,
@@ -47,21 +48,23 @@
                 </div>
             </div>
 
-            {{-- Pencarian --}}
             <form method="GET" action="{{ route('supplier.index') }}" x-data
-                  class="mb-3 rounded-xl bg-white p-3 shadow-sm">
-                <div class="relative">
+                class="mb-3 flex flex-wrap items-end gap-x-4 gap-y-3 rounded-xl bg-white p-3 shadow-sm">
+                <div class="relative min-w-[200px] flex-1 self-end">
                     <svg class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400"
-                         viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                         stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>
                     </svg>
                     <input type="text" name="q" value="{{ request('q') }}"
-                           placeholder="Cari nama supplier..." autocomplete="off"
-                           x-init="if ($el.value) { $el.focus(); $el.setSelectionRange($el.value.length, $el.value.length) }"
-                           @input.debounce.500ms="$el.form.submit()"
-                           class="h-9 w-full rounded-full border border-neutral-300 bg-white pl-10 pr-4 text-[11px] placeholder:text-neutral-400 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent">
+                        placeholder="Cari nama supplier..." autocomplete="off"
+                        x-init="if ($el.value) { $el.focus(); $el.setSelectionRange($el.value.length, $el.value.length) }"
+                        @input.debounce.500ms="$el.form.submit()"
+                        class="h-9 w-full rounded-full border border-neutral-300 bg-white pl-10 pr-4 text-[11px] placeholder:text-neutral-400 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent">
                 </div>
+
+                <x-tanggal type="month" name="bulan" label="Rekap bulan" :value="$bulan"
+                        :max="$bulanIni" :aktif="$bulan !== $bulanIni" />
             </form>
 
             {{-- Tabel --}}
@@ -72,51 +75,46 @@
                             <tr>
                                 <th class="px-4 py-2.5 font-semibold">Nama supplier</th>
                                 <th class="px-4 py-2.5 font-semibold">Telepon</th>
-                                <th class="px-4 py-2.5 font-semibold">Alamat</th>
+                                <th class="px-4 py-2.5 text-center font-semibold">Kirim ({{ \Carbon\Carbon::createFromFormat('Y-m', $bulan)->translatedFormat('M Y') }})</th>
+                                <th class="px-4 py-2.5 text-right font-semibold">Total nilai</th>
                                 @if ($admin) <th class="px-4 py-2.5 text-right font-semibold">Aksi</th> @endif
                             </tr>
                         </thead>
                         <tbody>
                             @forelse ($supplier as $item)
+                                @php $r = $ringkasan->get($item->id); @endphp
                                 <tr class="border-t border-neutral-100 transition hover:bg-cream/40"
                                     @if ($admin) :class="id === {{ $item->id }} ? 'bg-cream/60' : ''" @endif>
-                                    <td class="px-4 py-2 text-[12px] font-semibold">{{ $item->nama }}</td>
-                                    <td class="whitespace-nowrap px-4 py-2">{{ $item->telepon ?: '-' }}</td>
-                                    <td class="max-w-[260px] px-4 py-2 text-neutral-600">
-                                        <p class="truncate" title="{{ $item->alamat }}">{{ $item->alamat ?: '-' }}</p>
+                                    <td class="px-4 py-2">
+                                        <a href="{{ route('supplier.show', ['supplier' => $item, 'bulan' => $bulan]) }}"
+                                        class="text-[12px] font-semibold hover:text-accent hover:underline">{{ $item->nama }}</a>
+                                        @if ($item->alamat)
+                                            <p class="max-w-[240px] truncate text-[10px] text-neutral-400" title="{{ $item->alamat }}">{{ $item->alamat }}</p>
+                                        @endif
+                                    </td>
+                                    <td class="whitespace-nowrap px-4 py-2">
+                                        @if ($item->telepon)
+                                            <a href="https://wa.me/{{ preg_replace('/^0/', '62', preg_replace('/\D/', '', $item->telepon)) }}"
+                                            target="_blank" class="text-accent hover:underline">{{ $item->telepon }}</a>
+                                        @else
+                                            <span class="text-neutral-300">-</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-2 text-center {{ $r ? 'font-semibold' : 'text-neutral-300' }}">{{ $r->kali_kirim ?? 0 }}x</td>
+                                    <td class="whitespace-nowrap px-4 py-2 text-right {{ $r ? 'font-semibold' : 'text-neutral-300' }}">
+                                        {{ $r ? 'Rp ' . number_format($r->total_nilai, 0, ',', '.') : '-' }}
                                     </td>
                                     @if ($admin)
                                         <td class="px-4 py-2">
-                                            <div class="flex items-center justify-end gap-1.5">
-                                                <a href="{{ route('supplier.edit', $item) }}" @click.prevent="buka({{ $item->id }})"
-                                                   title="Ubah supplier" aria-label="Ubah supplier {{ $item->nama }}"
-                                                   class="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-300 text-neutral-600 transition hover:bg-neutral-50 hover:text-accent">
-                                                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                         stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                                        <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4 12.5-12.5z"/>
-                                                    </svg>
-                                                </a>
-                                                <form method="POST" action="{{ route('supplier.destroy', $item) }}"
-                                                      onsubmit="return confirm(@js('Hapus supplier ' . $item->nama . '?'))">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" title="Hapus supplier" aria-label="Hapus supplier {{ $item->nama }}"
-                                                            class="flex h-7 w-7 items-center justify-center rounded-full bg-red-100 text-red-600 transition hover:bg-red-200">
-                                                        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                             stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                                            <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/>
-                                                        </svg>
-                                                    </button>
-                                                </form>
-                                            </div>
+                                            {{-- tombol ubah dan hapus: pakai blok yang sudah ada --}}
                                         </td>
                                     @endif
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="{{ $admin ? 4 : 3 }}" class="px-4 py-12 text-center">
+                                    <td colspan="{{ $admin ? 5 : 4 }}" class="px-4 py-12 text-center">
                                         <svg class="mx-auto h-8 w-8 text-neutral-300" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                             stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">{!! $ikonSupplier !!}</svg>
+                                            stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">{!! $ikonSupplier !!}</svg>
                                         <p class="mt-2 text-xs text-neutral-400">Belum ada supplier yang cocok.</p>
                                     </td>
                                 </tr>
@@ -126,7 +124,9 @@
                 </div>
             </div>
 
-            <div class="mt-3">{{ $supplier->links() }}</div>
+            <div class="mt-4 border-t border-neutral-100 pt-4">
+                {{ $supplier->withQueryString()->links('vendor.pagination.custom') }}
+            </div>
         </section>
 
         {{-- ================= KANAN: TAMBAH / UBAH (admin) ================= --}}

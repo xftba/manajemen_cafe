@@ -18,6 +18,7 @@ return new class extends Migration
             $table->decimal('takaran', 12, 2);
             $table->timestamps();
             $table->unique(['menu_id', 'bahan_baku_id']);
+            $table->boolean('ikut_gula')->default(false)->after('temperatur');
         });
     }
 

@@ -181,7 +181,9 @@
                 <p x-show="daftar.length === 0" class="px-4 py-12 text-center text-xs text-neutral-400">Belum ada menu yang cocok.</p>
             </div>
 
-            <div class="mt-3">{{ $menu->links() }}</div>
+            <div class="mt-4 border-t border-neutral-100 pt-4">
+                {{ $menu->withQueryString()->links('vendor.pagination.custom') }}
+            </div>
         </section>
 
         {{-- ================= KANAN: FORM TAMBAH MENU ================= --}}

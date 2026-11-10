@@ -18,22 +18,22 @@ class StokService
      * @param  array<int,array{menu_id:int,jumlah:int,ukuran:?string}>  $baris
      * @return array<int,float>   [bahan_baku_id => total pemakaian]
      */
-   public function kebutuhan(array $baris): array
+    public function kebutuhan(array $baris): array
     {
         $ids  = collect($baris)->pluck('menu_id')->unique()->all();
         $menu = Menu::whereIn('id', $ids)->get()->keyBy('id');
 
-        // [menu_id][ukuran] => baris resep (semua temperatur)
         $resep = Resep::whereIn('menu_id', $ids)->get()->groupBy(['menu_id', 'ukuran']);
 
         $kebutuhan = [];
 
         foreach ($baris as $b) {
-            $m      = $menu[$b['menu_id']];
-            $ukuran = $m->pakai_varian ? ($b['ukuran'] ?? 'small') : 'small';
-            $suhu   = $m->pakai_varian ? ($b['temperatur'] ?? 'ice') : null;
+            $m       = $menu[$b['menu_id']];                       // 1. $m didefinisikan dulu
+            $ukuran  = $m->pakai_varian ? ($b['ukuran'] ?? 'small') : 'small';
+            $suhu    = $m->pakai_varian ? ($b['temperatur'] ?? 'ice') : null;
+            $gula    = $m->pakai_varian ? ($b['gula'] ?? 'normal') : 'normal';
+            $pengali = (float) config("cafe.pengali_gula.{$gula}", 1);
 
-            // Bahan umum (temperatur kosong) + bahan khusus temperatur yang dipilih
             $daftar = ($resep->get($m->id)?->get($ukuran) ?? collect())
                 ->filter(fn ($r) => $r->temperatur === null || $r->temperatur === $suhu);
 
@@ -42,14 +42,17 @@ class StokService
 
                 throw new TransaksiGagal(
                     $m->pakai_varian
-                        ? "Resep {$m->nama} ukuran {$label} belum dibuat, jadi pemakaian bahannya tidak bisa dihitung."
-                        : "Menu {$m->nama} belum punya resep, jadi pemakaian bahannya tidak bisa dihitung."
+                        ? "{$m->nama} ukuran {$label} sedang tidak tersedia."
+                        : "{$m->nama} sedang tidak tersedia."
                 );
             }
 
             foreach ($daftar as $r) {
+                $takaran = (float) $r->takaran * ($r->ikut_gula ? $pengali : 1);
+                if ($takaran <= 0) continue;
+
                 $kebutuhan[$r->bahan_baku_id] = ($kebutuhan[$r->bahan_baku_id] ?? 0)
-                    + (int) $b['jumlah'] * (float) $r->takaran;
+                    + (int) $b['jumlah'] * $takaran;
             }
         }
 

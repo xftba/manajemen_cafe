@@ -162,7 +162,9 @@
                 </div>
             </div>
 
-            <div class="mt-3">{{ $bahan->links() }}</div>
+            <div class="mt-4 border-t border-neutral-100 pt-4">
+                {{ $bahan->withQueryString()->links('vendor.pagination.custom') }}
+            </div>
         </section>
 
         {{-- ================= KANAN: TAMBAH / UBAH (admin) ================= --}}

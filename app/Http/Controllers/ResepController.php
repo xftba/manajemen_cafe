@@ -52,18 +52,19 @@ class ResepController extends Controller
 
             $aturan["resep.{$u}.*.bahan_baku_id"] = ['required', 'exists:bahan_baku,id'];
             $aturan["resep.{$u}.*.temperatur"]    = ['nullable', 'in:ice,hot'];
+            $aturan["resep.{$u}.*.ikut_gula"]     = ['nullable', 'boolean'];
             $aturan["resep.{$u}.*.takaran"]       = ['required', 'numeric', 'gt:0', 'max:9999999'];
 
             $pesan["resep.{$u}.*.bahan_baku_id.required"] = "{$label}: pilih bahan untuk setiap baris.";
             $pesan["resep.{$u}.*.takaran.required"]       = "{$label}: isi takaran untuk setiap bahan.";
             $pesan["resep.{$u}.*.takaran.gt"]             = "{$label}: takaran harus lebih dari 0.";
         }
-
         $data = $request->validate($aturan, $pesan);
 
         // Bahan yang sama hanya boleh dobel kalau temperaturnya tidak tumpang tindih
         foreach ($daftar as $u) {
             $label = $menu->pakai_varian ? config("cafe.ukuran.{$u}") : 'Resep';
+            
 
             foreach (collect($data['resep'][$u] ?? [])->groupBy('bahan_baku_id') as $bid => $grup) {
                 $suhu = $grup->map(fn ($r) => ($r['temperatur'] ?? null) ?: null);
@@ -89,6 +90,7 @@ class ResepController extends Controller
                         'ukuran'        => $u,
                         'bahan_baku_id' => $row['bahan_baku_id'],
                         'temperatur'    => $menu->pakai_varian ? (($row['temperatur'] ?? null) ?: null) : null,
+                        'ikut_gula'     => $menu->pakai_varian ? (bool) ($row['ikut_gula'] ?? false) : false,
                         'takaran'       => $row['takaran'],
                     ]);
                     $jumlah++;

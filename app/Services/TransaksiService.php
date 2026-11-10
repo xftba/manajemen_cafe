@@ -75,6 +75,7 @@ class TransaksiService
                 'jumlah'     => $d['jumlah'],
                 'ukuran'     => $d['ukuran'],
                 'temperatur' => $d['temperatur'],
+                'gula' => $d['gula'],
             ], $detail));
             $bahan     = $this->stok->kunciDanValidasi($kebutuhan);
 

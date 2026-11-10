@@ -461,7 +461,9 @@
             </div>
         </div>
 
-        <div class="mt-3">{{ $riwayat->withQueryString()->links('vendor.pagination.custom') }}</div>
+        <div class="mt-4 border-t border-neutral-100 pt-4">
+            {{ $riwayat->withQueryString()->links('vendor.pagination.custom') }}
+        </div>
 
         {{-- ================= POPUP PULIHKAN ================= --}}
         <div x-show="restore" x-cloak class="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">

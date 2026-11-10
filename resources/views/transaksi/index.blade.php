@@ -248,7 +248,9 @@
                 @endforelse
             </div>
 
-            <div class="mt-3">{{ $transaksi->withQueryString()->links('vendor.pagination.custom') }}</div>
+            <div class="mt-4 border-t border-neutral-100 pt-4">
+                {{ $transaksi->withQueryString()->links('vendor.pagination.custom') }}
+            </div>
         </section>
 
         {{-- ================= KANAN: DETAIL STRUK ================= --}}

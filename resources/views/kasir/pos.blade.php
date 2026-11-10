@@ -235,16 +235,20 @@
 
                     <div class="mt-1.5 grid grid-cols-2 gap-1.5">
                         <template x-for="[kode, teks] in Object.entries(opsi.temperatur)" :key="kode">
-                            <button type="button" @click="f.temperatur = kode"
+                            <button type="button" @click="pilihSuhu(kode)" :disabled="!temperaturBisa(kode)"
                                     :class="f.temperatur === kode
                                         ? 'border-accent bg-white text-neutral-900'
                                         : 'border-transparent bg-surface text-neutral-400'"
-                                    class="flex h-9 items-center justify-center gap-1.5 rounded-lg border text-[10px] font-medium transition">
-                                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
-                                     :class="f.temperatur === kode ? 'text-accent' : 'text-neutral-400'"
-                                     x-html="ikonTemperatur(kode)"></svg>
-                                <span x-text="teks"></span>
+                                    class="flex h-9 flex-col items-center justify-center rounded-lg border text-[10px] font-medium transition disabled:cursor-not-allowed disabled:opacity-40">
+                                <span class="flex items-center gap-1.5">
+                                    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+                                        :class="f.temperatur === kode ? 'text-accent' : 'text-neutral-400'"
+                                        x-html="ikonTemperatur(kode)"></svg>
+                                    <span x-text="teks"></span>
+                                </span>
+                                <span x-show="!temperaturBisa(kode)" class="text-[8px] font-normal text-red-600"
+                                    x-text="alasanTemperatur(kode)"></span>
                             </button>
                         </template>
                     </div>
@@ -584,84 +588,118 @@ document.addEventListener('alpine:init', () => {
         // ----- stok: dihitung per bahan dari resep ukuran masing-masing -----
         daftarUkuran(m) { return m.pakai_varian ? Object.keys(this.opsi.ukuran) : ['small']; },
 
-        resepUntuk(m, ukuran) {
-            const kunci = m.pakai_varian ? (ukuran || 'small') : 'small';
-            return (m.resep && m.resep[kunci]) || [];
-        },
+        daftarSuhu(m) { return m.pakai_varian ? Object.keys(this.opsi.temperatur) : [null]; },
+resepUntuk(m, ukuran, suhu = null, gula = 'normal') {
+    const kunci = m.pakai_varian ? (ukuran || 'small') : 'small';
+    const daftar = (m.resep && m.resep[kunci]) || [];
+    if (!m.pakai_varian) return daftar;
+    const p = (this.konfig.pengaliGula || {})[gula] ?? 1;
+    return daftar
+        .filter(r => !r.temperatur || r.temperatur === suhu)
+        .map(r => ({ ...r, takaran: r.ikut_gula ? r.takaran * p : r.takaran }));
+},
 
-        // Total bahan yang sudah dipakai pesanan saat ini ([bahan_id => jumlah])
         pakai(kecualiKey = null) {
             const total = {};
             for (const i of this.keranjang) {
                 if (i.key === kecualiKey) continue;
                 const m = this.menu.find(x => x.id === i.menu_id);
-                for (const r of this.resepUntuk(m, i.ukuran)) {
+                for (const r of this.resepUntuk(m, i.ukuran, i.temperatur)) {
                     total[r.bahan_id] = (total[r.bahan_id] || 0) + i.jumlah * r.takaran;
                 }
             }
             return total;
         },
 
-        bisaTambahUkuran(m, ukuran, jumlah = 1, kecualiKey = null) {
-            const resep = this.resepUntuk(m, ukuran);
+        bisaTambahUkuran(m, ukuran, jumlah = 1, kecualiKey = null, suhu = null) {
+            const resep = this.resepUntuk(m, ukuran, suhu);
             if (!resep.length) return false;
             const dipakai = this.pakai(kecualiKey);
             return resep.every(r =>
                 (this.stokAwal[r.bahan_id] || 0) - (dipakai[r.bahan_id] || 0) + 1e-6 >= jumlah * r.takaran);
         },
-        punyaResep(m) { return this.daftarUkuran(m).some(u => this.resepUntuk(m, u).length > 0); },
+
+        punyaResep(m) {
+            return this.daftarUkuran(m).some(u =>
+                this.daftarSuhu(m).some(s => this.resepUntuk(m, u, s).length > 0));
+        },
         bisaTambah(m) {
-            return this.daftarUkuran(m).some(u => this.bisaTambahUkuran(m, u));
+            return this.daftarUkuran(m).some(u =>
+                this.daftarSuhu(m).some(s => this.bisaTambahUkuran(m, u, 1, null, s)));
         },
         alasan(m) {
             if (!this.punyaResep(m)) return 'Tanpa resep';
             return 'Stok habis';
         },
-        // Porsi terbanyak yang masih bisa ditambahkan, dari ukuran mana pun
+
         sisa(menuId) {
             const m = this.menu.find(x => x.id === menuId);
             if (!m) return 0;
             const dipakai = this.pakai();
             let maks = 0;
-
             for (const u of this.daftarUkuran(m)) {
-                const resep = this.resepUntuk(m, u);
-                if (!resep.length) continue;
-                const porsi = Math.min(...resep.map(r =>
-                    Math.floor(((this.stokAwal[r.bahan_id] || 0) - (dipakai[r.bahan_id] || 0) + 1e-6) / r.takaran)));
-                maks = Math.max(maks, porsi);
+                for (const s of this.daftarSuhu(m)) {
+                    const resep = this.resepUntuk(m, u, s);
+                    if (!resep.length) continue;
+                    const porsi = Math.min(...resep.map(r =>
+                        Math.floor(((this.stokAwal[r.bahan_id] || 0) - (dipakai[r.bahan_id] || 0) + 1e-6) / r.takaran)));
+                    maks = Math.max(maks, porsi);
+                }
             }
             return Math.max(0, maks);
         },
 
-        // Apakah ukuran ini bisa dipilih di popup (resep ada dan stok cukup)
+        // Ukuran bisa dipilih untuk temperatur yang sedang dipilih di popup
         ukuranBisa(kode) {
             const m = this.menuPopup;
             if (!m) return false;
             const edit = this.f.editKey ? this.keranjang.find(i => i.key === this.f.editKey) : null;
-            return this.bisaTambahUkuran(m, kode, edit ? edit.jumlah : 1, edit ? edit.key : null);
+            return this.bisaTambahUkuran(m, kode, edit ? edit.jumlah : 1, edit ? edit.key : null,
+                m.pakai_varian ? this.f.temperatur : null);
         },
         alasanUkuran(kode) {
             const m = this.menuPopup;
             if (!m) return '';
-            return this.resepUntuk(m, kode).length ? 'Stok kurang' : 'Belum ada resep';
+            const suhu = m.pakai_varian ? this.f.temperatur : null;
+            return this.resepUntuk(m, kode, suhu).length ? 'Stok kurang' : 'Tidak tersedia';
         },
 
-        // ----- kategori dan pencarian -----
-        pilihKategori(id) {
-            this.kategoriAktif = id;
-            this.cari = '';
-            const kolom = document.getElementById('cari-menu');
-            if (kolom) kolom.value = '';
+        // Temperatur bisa dipilih kalau minimal satu ukuran masih bisa dibuat
+        temperaturBisa(kode) {
+            const m = this.menuPopup;
+            if (!m) return false;
+            const edit = this.f.editKey ? this.keranjang.find(i => i.key === this.f.editKey) : null;
+            return this.daftarUkuran(m).some(u =>
+                this.bisaTambahUkuran(m, u, edit ? edit.jumlah : 1, edit ? edit.key : null, kode));
+        },
+        alasanTemperatur(kode) {
+            const m = this.menuPopup;
+            if (!m) return '';
+            const adaResep = this.daftarUkuran(m).some(u => this.resepUntuk(m, u, kode).length > 0);
+            return adaResep ? 'Stok kurang' : 'Tidak tersedia';
+        },
+        pilihSuhu(kode) {
+            if (!this.temperaturBisa(kode)) return;
+            this.f.temperatur = kode;
+            // Kalau ukuran terpilih tidak ada untuk temperatur ini, pindah ke ukuran yang bisa
+            if (!this.ukuranBisa(this.f.ukuran)) {
+                const u = this.daftarUkuran(this.menuPopup).find(x => this.ukuranBisa(x));
+                if (u) this.f.ukuran = u;
+            }
         },
 
-        // ----- popup varian -----
         buka(m) {
             if (!this.bisaTambah(m)) return;
-            const ukuran = this.daftarUkuran(m).find(u => this.bisaTambahUkuran(m, u)) || 'small';
-            this.f = { menuId: m.id, temperatur: 'ice', ukuran, gula: 'normal', catatan: '', editKey: null };
+            let suhu = 'ice', ukuran = 'small';
+            outer: for (const s of this.daftarSuhu(m)) {
+                for (const u of this.daftarUkuran(m)) {
+                    if (this.bisaTambahUkuran(m, u, 1, null, s)) { suhu = s; ukuran = u; break outer; }
+                }
+            }
+            this.f = { menuId: m.id, temperatur: suhu || 'ice', ukuran, gula: 'normal', catatan: '', editKey: null };
             this.popup = true;
         },
+
         ganti(item) {
             this.f = {
                 menuId: item.menu_id,
@@ -735,7 +773,7 @@ document.addEventListener('alpine:init', () => {
             if (delta > 0) {
                 const m = this.menu.find(x => x.id === item.menu_id);
 
-                if (!this.bisaTambahUkuran(m, item.ukuran, 1)) {
+                if (!this.bisaTambahUkuran(m, item.ukuran, 1, null, item.temperatur)) {
                     this.toast('Stok bahan ' + item.nama + ' tidak cukup untuk menambah porsi lagi.');
                     return;
                 }

@@ -104,7 +104,9 @@
                 </div>
             </div>
 
-            <div class="mt-3">{{ $riwayat->links() }}</div>
+            <div class="mt-4 border-t border-neutral-100 pt-4">
+                {{ $riwayat->withQueryString()->links('vendor.pagination.custom') }}
+            </div>
         </section>
 
         {{-- ================= KANAN: CATAT ================= --}}

@@ -157,6 +157,8 @@
         </div>
     </div>
 
-    <div class="mt-3">{{ $log->withQueryString()->links('vendor.pagination.custom') }}</div>
+    <div class="mt-4 border-t border-neutral-100 pt-4">
+        {{ $log->withQueryString()->links('vendor.pagination.custom') }}
+    </div>
 </div>
 @endsection
